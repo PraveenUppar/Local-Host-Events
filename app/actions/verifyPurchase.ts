@@ -4,13 +4,14 @@ import { Stripe } from "stripe";
 import { prisma } from "@/lib/db";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover", // Use the stable version matching your package.json
+  apiVersion: "2025-11-17.clover",
 });
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function verifyPurchase(sessionId: string) {
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const couponId = session.metadata?.couponId;
 
     if (session.payment_status !== "paid") {
       return { success: false, error: "Payment not completed" };
@@ -71,6 +72,13 @@ export async function verifyPurchase(sessionId: string) {
           status: "VALID",
         },
       });
+
+      if (couponId) {
+        await tx.coupon.update({
+          where: { id: couponId },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
     });
     // --- TRANSACTION END ---
 

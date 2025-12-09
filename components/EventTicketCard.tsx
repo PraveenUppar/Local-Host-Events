@@ -27,11 +27,11 @@ export default function EventTicketCard({
 
   // Find the full object of the selected ticket
   const selectedTicket = ticketVariants.find((t) => t.id === selectedTicketId);
-
+  const [couponCode, setCouponCode] = useState("");
   // Helper to handle the buy action
   const handleBuy = async () => {
     if (!selectedTicketId) return;
-    await createCheckoutSession(selectedTicketId);
+    await createCheckoutSession(selectedTicketId, couponCode);
   };
 
   const isSoldOut = selectedTicket && selectedTicket.totalStock <= 0;
@@ -96,6 +96,21 @@ export default function EventTicketCard({
         })}
       </div>
 
+      <div className="mb-4">
+        <label className="text-xs font-medium text-gray-500 mb-1 block">
+          Discount Code
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="e.g. SAVE20"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+            className="flex-1 border p-2 rounded text-sm uppercase"
+          />
+        </div>
+      </div>
+
       {/* BUY BUTTON SECTION */}
       <div className="mt-6">
         <SignedIn>
@@ -109,7 +124,7 @@ export default function EventTicketCard({
                 "Sold Out"
               ) : (
                 <>
-                  Buy Ticket{" "}
+                  Buy Ticket
                   {selectedTicket &&
                     Number(selectedTicket.price) === 0 &&
                     "(Free)"}
@@ -117,6 +132,10 @@ export default function EventTicketCard({
               )}
             </button>
           </form>
+          <p className="text-black justify-center font-light text-xs mt-2">
+            Use the coupon code "WELCOME2026" and top 100 users will get 5% off
+            hurry up!
+          </p>
         </SignedIn>
 
         <SignedOut>
