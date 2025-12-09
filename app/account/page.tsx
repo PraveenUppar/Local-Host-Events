@@ -7,6 +7,8 @@ import Link from "next/link";
 import { Edit, Trash2, Ticket, Calendar } from "lucide-react";
 import { deleteEvent } from "@/app/actions/deleteEvent";
 import { prisma } from "@/lib/db"; // 1. Import Prisma
+import { getDashboardStats } from "@/app/actions/getDashboardStats"; // Import Action
+import Dashboard from "@/components/Dashboard"; // Import Component
 
 export default async function AccountPage() {
   const { userId } = await auth();
@@ -15,6 +17,8 @@ export default async function AccountPage() {
   // 2. Fetch User Role first
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const isAdmin = user?.role === "ADMIN";
+  const dashboardStats = isAdmin ? await getDashboardStats() : null;
+  const pass_dashboardStats = JSON.parse(JSON.stringify(dashboardStats));
 
   // 3. Conditional Data Fetching
   // We fetch tickets for everyone.
@@ -28,17 +32,23 @@ export default async function AccountPage() {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Account</h1>
-
         <div className="space-y-12">
           {/* SECTION 1: MY EVENTS (Admin View) */}
           {/* 4. Wrap the entire Admin block in this check */}
-          {isAdmin && (
+          {isAdmin && dashboardStats && (
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <div className="mb-4 mt-2 p-2">
+                <h2 className="text-xl font-semibold mb-4">
+                  Analytics Overview
+                </h2>
+                <Dashboard stats={pass_dashboardStats} />
+              </div>
               <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
                   My Organized Events
                 </h2>
+
                 <div className="flex gap-2">
                   <Link
                     href="/admin/scan"
