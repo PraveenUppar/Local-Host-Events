@@ -113,9 +113,7 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 
 ## Getting Started
 
-### Follow these steps to run the application locally:
-
-Clone the repository
+Follow these steps to run the application locally:
 
 ```
 git clone https://github.com/your-username/event-ticketing-platform.git
