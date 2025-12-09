@@ -2,11 +2,10 @@
 "use server";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { redirect } from "next/navigation";
 
 export async function createEvent(formData: FormData) {
-  // Get the current user from Clerk
   const { userId } = await auth();
   const user = await currentUser();
 
@@ -14,49 +13,60 @@ export async function createEvent(formData: FormData) {
     throw new Error("Unauthorized");
   }
 
-  // Use the Clerk ID as the Postgres ID for 1:1 mapping
+  // 1. Sync User (Your existing logic)
   const dbUser = await prisma.user.upsert({
     where: { email: user.emailAddresses[0].emailAddress },
-    update: {}, // If exists, do nothing
+    update: {},
     create: {
-      id: userId, // Match the database ID to Clerk ID
+      id: userId,
       email: user.emailAddresses[0].emailAddress,
       name:
         `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Organizer",
-      role: "ADMIN", // Auto-promote to admin for now
+      role: "ADMIN",
     },
   });
 
-  // Extract data from form
+  // 2. Extract Event Fields
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const location = formData.get("location") as string;
   const dateStr = formData.get("date") as string;
 
-  const ticketName = formData.get("ticketName") as string;
-  const price = Number(formData.get("price"));
-  const stock = Number(formData.get("stock"));
+  // 3. Extract and Parse Ticket Variants
+  const ticketVariantsJson = formData.get("ticketVariants") as string;
 
-  // Create the Event AND the TicketVariant in one transaction
+  interface VariantInput {
+    name: string;
+    price: number;
+    stock: number;
+  }
+
+  let variants: VariantInput[] = [];
+  try {
+    variants = JSON.parse(ticketVariantsJson);
+  } catch (e) {
+    throw new Error("Invalid ticket variants data");
+  }
+
+  // 4. Create Event WITH Multiple Ticket Variants
   await prisma.event.create({
     data: {
       title,
       description,
       location,
       date: new Date(dateStr),
-      organizerId: dbUser.id, // Link to the organizer
+      organizerId: dbUser.id,
 
-      // Create the ticket type automatically
+      // Prisma Nested Write: Create all variants in one go!
       ticketVariants: {
-        create: {
-          name: ticketName,
-          price: price,
-          totalStock: stock,
-        },
+        create: variants.map((v) => ({
+          name: v.name,
+          price: v.price,
+          totalStock: v.stock,
+        })),
       },
     },
   });
 
-  // 5. Redirect back to home to see the new event
   redirect("/");
 }

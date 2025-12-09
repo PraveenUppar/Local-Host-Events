@@ -44,7 +44,7 @@ model Event {
 // TicketVariant schema
 model TicketVariant {
   id          String @id @default(uuid())
-  name        String // e.g., "Early Bird" or "VIP"
+  name        String 
   description String?
   
   price       Decimal @db.Decimal(10, 2) // Used Decimal for money

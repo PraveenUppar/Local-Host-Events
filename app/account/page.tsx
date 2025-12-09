@@ -6,18 +6,22 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Edit, Trash2, Ticket, Calendar } from "lucide-react";
 import { deleteEvent } from "@/app/actions/deleteEvent";
+import { prisma } from "@/lib/db"; // 1. Import Prisma
 
 export default async function AccountPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // Fetch both data streams in parallel
-  const [tickets, organizedEvents] = await Promise.all([
-    getTickets(),
-    getOrganizerEvents(),
-  ]);
+  // 2. Fetch User Role first
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const isAdmin = user?.role === "ADMIN";
 
-  // Simple formatting helper
+  // 3. Conditional Data Fetching
+  // We fetch tickets for everyone.
+  // We ONLY fetch organized events if they are an Admin.
+  const tickets = await getTickets();
+  const organizedEvents = isAdmin ? await getOrganizerEvents() : [];
+
   const formatDate = (date: Date) => new Date(date).toLocaleDateString();
 
   return (
@@ -27,97 +31,97 @@ export default async function AccountPage() {
 
         <div className="space-y-12">
           {/* SECTION 1: MY EVENTS (Admin View) */}
-          {/* We show this section only if the user has created events */}
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                My Organized Events
-              </h2>
-              <div className="flex gap-2">
-                <Link
-                  href="/admin/scan"
-                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
-                >
-                  Scan Tickets
-                </Link>
-                <Link
-                  href="/events/create"
-                  className="text-sm bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
-                >
-                  Add New Event
-                </Link>
-              </div>
-            </div>
-
-            {organizedEvents.length === 0 ? (
-              <div className="p-10 text-center text-gray-500">
-                You haven't hosted any events yet.
-              </div>
-            ) : (
-              <div className="divide-y">
-                {organizedEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-50 transition-colors"
+          {/* 4. Wrap the entire Admin block in this check */}
+          {isAdmin && (
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  My Organized Events
+                </h2>
+                <div className="flex gap-2">
+                  <Link
+                    href="/admin/scan"
+                    className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
                   >
-                    {/* Event Info */}
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg">{event.title}</h3>
-                      <div className="text-sm text-gray-500 mt-1 flex gap-4">
-                        <span>{formatDate(event.date)}</span>
-                        <span>•</span>
-                        <span>{event._count.tickets} tickets sold</span>
-                        <span>•</span>
-                        <span
-                          className={
-                            event._count.tickets > 0
-                              ? "text-green-600 font-medium"
-                              : "text-gray-400"
-                          }
+                    Scan Tickets
+                  </Link>
+                  <Link
+                    href="/events/create"
+                    className="text-sm bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+                  >
+                    Add New Event
+                  </Link>
+                </div>
+              </div>
+
+              {organizedEvents.length === 0 ? (
+                <div className="p-10 text-center text-gray-500">
+                  You haven't hosted any events yet.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {organizedEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-50 transition-colors"
+                    >
+                      {/* Event Info */}
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg">{event.title}</h3>
+                        <div className="text-sm text-gray-500 mt-1 flex gap-4">
+                          <span>{formatDate(event.date)}</span>
+                          <span>•</span>
+                          <span>{event._count.tickets} tickets sold</span>
+                          <span>•</span>
+                          <span
+                            className={
+                              event._count.tickets > 0
+                                ? "text-green-600 font-medium"
+                                : "text-gray-400"
+                            }
+                          >
+                            $
+                            {event._count.tickets *
+                              Number(event.ticketVariants[0]?.price || 0)}{" "}
+                            earned
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/events/${event.id}/edit`}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                          title="Edit Event"
                         >
-                          $
-                          {event._count.tickets *
-                            Number(event.ticketVariants[0]?.price || 0)}{" "}
-                          earned
-                        </span>
+                          <Edit className="w-5 h-5" />
+                        </Link>
+
+                        <form
+                          action={async () => {
+                            "use server";
+                            await deleteEvent(event.id);
+                          }}
+                        >
+                          <button
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            title="Delete Event"
+                            type="submit"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </form>
                       </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-3">
-                      {/* EDIT BUTTON (Links to a new page we will build next) */}
-                      <Link
-                        href={`/events/${event.id}/edit`}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
-                        title="Edit Event"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </Link>
-
-                      {/* DELETE BUTTON */}
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteEvent(event.id);
-                        }}
-                      >
-                        <button
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                          title="Delete Event"
-                          type="submit"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* SECTION 2: MY TICKETS (User View) */}
+          {/* SECTION 2: MY TICKETS (User View) - Visible to Everyone */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
             <div className="p-6 border-b bg-gray-50">
               <h2 className="text-xl font-semibold flex items-center gap-2">
