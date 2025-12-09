@@ -111,8 +111,9 @@ RESEND_API_KEY=re_...
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
-Getting Started
-Follow these steps to run the application locally:
+## Getting Started
+
+# Follow these steps to run the application locally:
 
 Clone the repository
 
