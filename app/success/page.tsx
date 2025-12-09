@@ -31,7 +31,7 @@ export default async function SuccessPage({ searchParams }: PageProps) {
       <h1 className="text-3xl font-bold text-green-600 mb-4">Success!</h1>
       <p>Your ticket has been confirmed.</p>
       <Link
-        href="/tickets"
+        href="/account"
         className="mt-8 bg-black text-white px-6 py-2 rounded"
       >
         View My Tickets

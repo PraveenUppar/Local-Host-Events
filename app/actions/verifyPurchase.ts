@@ -1,11 +1,12 @@
 "use server";
-
+import { Resend } from "resend";
 import { Stripe } from "stripe";
 import { prisma } from "@/lib/db";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-11-17.clover",
 });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function verifyPurchase(sessionId: string) {
   try {
@@ -79,6 +80,29 @@ export async function verifyPurchase(sessionId: string) {
         data: { totalStock: { decrement: 1 } },
       });
     });
+
+    try {
+      await resend.emails.send({
+        from: "onboarding@resend.dev", // Use this exact email for testing
+        to: userEmail, // The user's email from Stripe
+        subject: `Your Ticket for ${eventId}`, // You might want to fetch event title properly
+        html: `
+          <h1>You're going to the event!</h1>
+          <p>We have confirmed your ticket purchase.</p>
+          <p><strong>Amount Paid:</strong> $${amountTotal}</p>
+          <br />
+          <p>
+            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/tickets" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+              View Your Ticket QR Code
+            </a>
+          </p>
+        `,
+      });
+      console.log("📧 Email sent to", userEmail);
+    } catch (emailError) {
+      // Don't fail the whole request if email fails, just log it
+      console.error("Failed to send email:", emailError);
+    }
 
     return { success: true };
   } catch (error) {
