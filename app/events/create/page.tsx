@@ -1,8 +1,7 @@
-// app/events/create/page.tsx
 "use client";
 
 import { createEvent } from "../../actions/createEvent";
-import { useState } from "react";
+import { useState, useTransition } from "react"; // <--- 1. Import useTransition
 import {
   Plus,
   Trash2,
@@ -10,6 +9,7 @@ import {
   MapPin,
   Sparkles,
   ArrowLeft,
+  Loader2, // <--- 2. Import Loader Icon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -21,7 +21,9 @@ interface TicketVariant {
 }
 
 export default function CreateEventPage() {
-  // 1. Manage Ticket State
+  // 3. Initialize Transition Hook
+  const [isPending, startTransition] = useTransition();
+
   const [tickets, setTickets] = useState<TicketVariant[]>([
     { id: "1", name: "General Admission", price: 0, stock: 100 },
   ]);
@@ -49,14 +51,19 @@ export default function CreateEventPage() {
     );
   };
 
+  // 4. Create a wrapper for the Server Action
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      await createEvent(formData);
+    });
+  }
+
   return (
     <div className="min-h-screen py-12 px-4 relative overflow-hidden">
-      {/* Background Ambience */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
       <div className="max-w-4xl mx-auto">
-        {/* Header & Nav */}
         <div className="mb-8 flex items-center justify-between">
           <div>
             <Link
@@ -71,7 +78,8 @@ export default function CreateEventPage() {
           </div>
         </div>
 
-        <form action={createEvent} className="space-y-8">
+        {/* 5. Attach the new handleSubmit wrapper */}
+        <form action={handleSubmit} className="space-y-8">
           {/* --- SECTION 1: Event Details --- */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 shadow-xl">
             <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
@@ -82,7 +90,6 @@ export default function CreateEventPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Title */}
               <div className="space-y-2">
                 <label className="text-xs font-mono uppercase tracking-wider text-slate-500">
                   Event Title
@@ -96,7 +103,6 @@ export default function CreateEventPage() {
                 />
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <label className="text-xs font-mono uppercase tracking-wider text-slate-500">
                   Description
@@ -110,7 +116,6 @@ export default function CreateEventPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Date */}
                 <div className="space-y-2">
                   <label className="text-xs font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <Calendar className="w-3 h-3" /> Date & Time
@@ -119,10 +124,9 @@ export default function CreateEventPage() {
                     name="date"
                     type="datetime-local"
                     required
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ]scheme-dark"
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all scheme-dark"
                   />
                 </div>
-                {/* Location */}
                 <div className="space-y-2">
                   <label className="text-xs font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <MapPin className="w-3 h-3" /> Location
@@ -152,7 +156,6 @@ export default function CreateEventPage() {
               </button>
             </div>
 
-            {/* Hidden Input for Server Action */}
             <input
               type="hidden"
               name="ticketVariants"
@@ -165,12 +168,10 @@ export default function CreateEventPage() {
                   key={ticket.id}
                   className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start md:items-end bg-slate-800/30 border border-white/5 p-4 rounded-xl relative group hover:border-white/10 transition-colors"
                 >
-                  {/* Decorative index number */}
                   <div className="hidden md:block absolute -left-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-600 -rotate-90">
                     TIER {index + 1}
                   </div>
 
-                  {/* Name */}
                   <div className="md:col-span-5 space-y-1">
                     <label className="block text-[10px] text-slate-500 uppercase tracking-wider">
                       Ticket Name
@@ -186,7 +187,6 @@ export default function CreateEventPage() {
                     />
                   </div>
 
-                  {/* Price */}
                   <div className="md:col-span-3 space-y-1">
                     <label className="block text-[10px] text-slate-500 uppercase tracking-wider">
                       Price ($)
@@ -208,7 +208,6 @@ export default function CreateEventPage() {
                     />
                   </div>
 
-                  {/* Stock */}
                   <div className="md:col-span-3 space-y-1">
                     <label className="block text-[10px] text-slate-500 uppercase tracking-wider">
                       Capacity
@@ -229,7 +228,6 @@ export default function CreateEventPage() {
                     />
                   </div>
 
-                  {/* Delete */}
                   <div className="md:col-span-1 flex justify-end md:justify-center">
                     <button
                       type="button"
@@ -245,12 +243,26 @@ export default function CreateEventPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* 6. Update Button with Pending State */}
           <button
             type="submit"
-            className="w-full bg-linear-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_50px_rgba(37,99,235,0.5)] hover:scale-[1.01] transition-all transform duration-200"
+            disabled={isPending} // Disable while loading
+            className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl shadow-[0_0_30px_rgba(37,99,235,0.3)] transition-all transform duration-200
+              ${
+                isPending
+                  ? "opacity-75 cursor-not-allowed scale-[0.98]"
+                  : "hover:shadow-[0_0_50px_rgba(37,99,235,0.5)] hover:scale-[1.01]"
+              }
+            `}
           >
-            Launch Event Protocol
+            {isPending ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Initializing Protocol...
+              </span>
+            ) : (
+              "Launch Event Protocol"
+            )}
           </button>
         </form>
       </div>
