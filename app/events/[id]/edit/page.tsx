@@ -2,7 +2,7 @@
 
 import { getEventForEdit } from "@/app/actions/getEventForEdit";
 import { updateEvent } from "@/app/actions/updateEvent";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, X } from "lucide-react";
 

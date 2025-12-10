@@ -2,7 +2,7 @@
 import { verifyPurchase } from "@/app/actions/verifyPurchase";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Check, Ticket, ArrowRight, Home } from "lucide-react";
+import { Check, ArrowRight, Home } from "lucide-react";
 
 interface PageProps {
   searchParams: Promise<{ session_id?: string }>;

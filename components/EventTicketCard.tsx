@@ -5,12 +5,12 @@ import { createCheckoutSession } from "@/app/actions/createCheckoutSession";
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { Check, Ticket, Loader2, Sparkles } from "lucide-react";
 
-interface TicketVariant {
-  id: string;
-  name: string;
-  price: number;
-  totalStock: number;
-}
+// interface TicketVariant {
+//   id: string;
+//   name: string;
+//   price: number;
+//   totalStock: number;
+// }
 
 interface EventTicketCardProps {
   ticketVariants: any[];

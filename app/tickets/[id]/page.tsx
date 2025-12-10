@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import Link from "next/link";
 import {
-  Calendar,
   MapPin,
   Ticket as TicketIcon,
   ArrowLeft,
