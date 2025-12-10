@@ -24,7 +24,7 @@ export async function getDashboardStats() {
   let totalTicketsSold = 0;
   let totalRevenue = 0;
 
-  events.forEach((event) => {
+  events.forEach((event: any) => {
     const ticketsSold = event._count.tickets;
     totalTicketsSold += ticketsSold;
 
