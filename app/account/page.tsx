@@ -71,7 +71,7 @@ export default async function AccountPage() {
                 </div>
               ) : (
                 <div className="divide-y">
-                  {organizedEvents.map((event) => (
+                  {organizedEvents.map((event: any) => (
                     <div
                       key={event.id}
                       className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-50 transition-colors"
