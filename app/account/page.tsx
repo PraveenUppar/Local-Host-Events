@@ -192,7 +192,7 @@ export default async function AccountPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
-                {tickets.map((ticket) => (
+                {tickets.map((ticket: any) => (
                   <div
                     key={ticket.id}
                     className="flex flex-col p-5 rounded-xl border border-white/10 bg-slate-800/20 hover:bg-slate-800/50 hover:border-white/20 transition-all group relative overflow-hidden"
