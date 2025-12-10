@@ -50,10 +50,12 @@ export default async function Home({
 
       {/* 2. RESULTS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {events.map((event) => {
+        {events.map((event: any) => {
           const lowestPrice =
             event.ticketVariants.length > 0
-              ? Math.min(...event.ticketVariants.map((t) => Number(t.price)))
+              ? Math.min(
+                  ...event.ticketVariants.map((t: any) => Number(t.price))
+                )
               : "N/A";
 
           return (
