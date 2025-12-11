@@ -1,136 +1,105 @@
-# Local Host Event: Event Ticketing Platform
+# Local Host Events: Full-Stack Ticketing Platform
 
-A production-ready full-stack application designed for hosting and booking technology events. This platform facilitates a complete e-commerce lifecycle, including event creation, secure payments, digital ticket generation, and gate management via QR code scanning.
+A production-ready, scalable event booking platform built with modern technologies to handle real-time ticket sales, secure payments, and digital gate management. This project specifically solves challenges around concurrency control for ticket inventory, robust authentication flows, and reliable payment verification.
+
+**Project Link:** [https://local-host-events.pavicodes.in](https://local-host-events.pavicodes.in)
 
 ## Table of Contents
-
-- [About the Project](#about-the-project)
-- [Key Features](#key-features)
-- [Technology Stack](#technology-stack)
-- [System Architecture](#system-architecture)
-- [Database Design](#database-design)
-- [Application Pages](#application-pages)
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Database Schema](#database-schema)
+- [Screenshots](#screenshots)
+- [System Workflows](#system-workflows)
+- [Concurrency & Inventory Safety](#concurrency--inventory-safety)
 - [Environment Variables](#environment-variables)
-- [Getting Started](#getting-started)
 
-## About the Project
+## Tech Stack
 
-This application resolves common challenges in event ticketing systems, specifically focusing on data integrity during high-concurrency sales and secure payment verification. It utilizes a modern "T3-style" stack to ensure type safety from the database to the frontend.
-
-## Key Features
-
-### User Features
-
-- **Browse & Discovery:** Server-side search and offset-based pagination to handle large event lists.
-- **Secure Booking:** Integrated Stripe Checkout with a custom verification pattern.
-- **Discount System:** Support for coupon codes with usage limits and percentage-based discounts.
-- **Digital Wallet:** access to purchased tickets with unique QR codes.
-- **Email Notifications:** Automated purchase receipts via Resend.
-
-### Admin Features
-
-- **Event Management:** Create, edit, and delete events with cascading database cleanups.
-- **Sales Analytics:** View revenue and ticket count per event.
-- **Gatekeeper System:** Built-in QR code scanner (camera integration) to verify and mark tickets as "USED" in real-time.
-
-### Technical Highlights
-
-- **Concurrency Control:** Uses atomic database transactions and SQL check constraints to prevent overselling tickets (race conditions).
-- **Payment Verification:** Implements a pull-based verification pattern instead of webhooks to ensure transaction reliability without network tunnel dependencies.
-- **Role-Based Access Control (RBAC):** Distinguishes between standard users and administrators via database roles.
-
-## Technology Stack
-
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 15 (App Router, Server Actions)
 - **Language:** TypeScript
-- **Styling:** Tailwind CSS
+- **Styling:** Tailwind CSS + Lucide Icons
 - **Database:** PostgreSQL (hosted on Supabase)
 - **ORM:** Prisma
-- **Authentication:** Clerk
+- **Authentication:** Clerk (OAuth 2.0, Role Management)
 - **Payments:** Stripe
-- **Email:** Resend
-- **Utilities:** html5-qrcode (Scanning), qrcode.react (Generation), lucide-react (Icons)
+- **Deployment:** Vercel
 
-## System Architecture
+## Features
 
-The application moves away from traditional webhooks for the critical payment path. Instead, it uses a verification strategy:
+- Authentication with Clerk (Google & Email login)
+- Role-Based Access Control (Admins and Users)
+- Real-time Inventory Management preventing overselling
+- Stripe integration with pull-based session verification (no webhooks)
+- Digital ticket generation with unique QR codes
+- Admin QR gate scanning system for ticket validation
+- Server-side search and pagination for event browsing
+- Email notifications for ticket purchase confirmation
 
-1. User is redirected to Stripe with metadata (User ID, Ticket ID) attached to the session.
-2. Upon redirecting to the success page, the server validates the session status directly with Stripe.
-3. If valid, the server performs an atomic transaction: Upsert User -> Create Order -> Create Ticket -> Decrement Stock.
+## Database Schema
 
-## Database Design
+The normalized schema tightly links users, events, orders, tickets, and ticket variants with strict foreign keys to maintain referential integrity.
+> *See `prisma/schema.prisma` for the full definition.*
 
-The database is normalized and relies on strict foreign key relationships.
+<p align="center">
+<img src="screenshots/db design.png" alt="Database Schema" width="80%" />
+</p>
 
-**Core Models:**
+## Screenshots
 
-- **User:** Stores identity and role (Admin/User).
-- **Event:** Contains details like title, date, location, and organizer ID.
-- **TicketVariant:** Represents price tiers (e.g., VIP, General) and manages stock inventory.
-- **Coupon:** Stores discount codes, usage limits, and event associations.
-- **Order:** Links a User to a Stripe Payment ID and total amount.
-- **Ticket:** The unique digital asset linking an Order to an Event. Contains the unique QR token and status (VALID/USED).
+| Event Listing & Search | Event Detail & Ticket Selection | Checkout Success Page |
+| :--------------------: | :-----------------------------: | :-------------------: |
+| ![Event Page](screenshots/Eventspage.png) | ![Event Details](screenshots/eventdetails.png) | ![Success Page](screenshots/ticketsuccess.png) |
 
-**Concurrency Safety:**
-A SQL Check Constraint (`CHECK "totalStock" >= 0`) is applied to the TicketVariant table to enforce inventory limits at the database engine level.
+| Digital Ticket with QR Code | Admin Dashboard | Event Management |
+| :-------------------------: | :-------------: | :--------------: |
+| ![Ticket Pass](screenshots/ticketpas.png) | ![Admin Dashboard](screenshots/admindashboard.png) | ![Admin Events](screenshots/adminevents.png) |
 
-## Application Pages
+## System Workflows
 
-- **/** (Home): Displays paginated events with a search bar.
-- **/events/[id]:** Event details, ticket selection, and checkout initiation.
-- **/events/create:** (Admin) Form to publish new events and define ticket tiers.
-- **/events/[id]/edit:** (Admin) Interface to modify existing event details.
-- **/account:** User dashboard showing purchased tickets; Admin dashboard showing organized events and sales stats.
-- **/tickets/[id]:** A standalone "Boarding Pass" page displaying the large QR code for entry.
-- **/admin/scan:** A mobile-optimized camera interface for verifying attendee tickets.
+### 1. Authentication & User Sync (Clerk)
+Instead of relying on fragile webhooks, this project implements a robust **"Sync-on-Login"** pattern.
+
+1.  **Login:** User signs in via Clerk (Google/Email).
+2.  **Lazy Sync:** On page load, a lightweight Server Action (`syncUser`) checks if the user exists in the Supabase `User` table.
+3.  **Atomic Creation:** If missing, the user is instantly created in the database, ensuring foreign key constraints (like `organizerId`) never fail.
+
+### 2. Purchase Flow (Stripe & Ticket Generation)
+The payment system uses a secure "Pull-Based" verification pattern rather than webhooks.
+
+1.  **Checkout:** User selects tickets → Redirected to Stripe Hosted Checkout.
+2.  **Verification:** User returns to `/success?session_id=...`.
+3.  **Validation:** The server explicitly calls the Stripe API to verify the payment status (preventing URL spoofing).
+4.  **Generation:** Once verified, the system performs a multi-table transaction:
+    * Creates the **Order**.
+    * Generates unique **Tickets** with QR codes.
+    * Decrements **Stock**.
+
+## Concurrency & Inventory Safety
+
+### The "1 Ticket, 2 Users" Problem:
+Without proper concurrency control, simultaneous purchases of the last ticket can cause overselling.
+
+### Solution: Atomic Database Operations
+- Stock decrements are done atomically at the database level.
+- Implemented with Prisma’s atomic decrement:
+
+- A database-level check constraint (`CHECK stock >= 0`) prevents stock from dropping below zero, ensuring data integrity without relying on JavaScript logic.
 
 ## Environment Variables
 
-To run this project, you must set up the following variables in a `.env` file:
-
-```env
-# Database (Supabase / PostgreSQL)
+```
+Database (Supabase Postgres)
 DATABASE_URL="postgres://..."
-DIRECT_URL="postgres://..."
 
-# Authentication (Clerk)
+Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-# Payments (Stripe)
+Stripe Payments
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 
-# Email (Resend)
-RESEND_API_KEY=re_...
-
-# App Config
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
+App Configuration
+NEXT_PUBLIC_BASE_URL="http://localhost:3000"
 ```
 
-## Getting Started
-
-Follow these steps to run the application locally:
-
-```
-git clone https://github.com/your-username/event-ticketing-platform.git
-```
-
-```
-cd event-ticketing-platform
-```
-
-```
-npm install
-```
-
-```
-npx prisma db push
-```
-
-```
-npm run dev
-```
